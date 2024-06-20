@@ -1,10 +1,10 @@
-#![cfg(feature="conpty")]
+#![cfg(feature = "conpty")]
 
+use regex::Regex;
 use std::ffi::OsString;
 use std::{thread, time};
-use regex::Regex;
 
-use winptyrs::{PTY, PTYArgs, PTYBackend, MouseMode, AgentConfig};
+use winptyrs::{AgentConfig, MouseMode, PTYArgs, PTYBackend, PTY};
 
 #[test]
 #[ignore]
@@ -14,12 +14,12 @@ fn spawn_conpty() {
         rows: 25,
         mouse_mode: MouseMode::WINPTY_MOUSE_MODE_NONE,
         timeout: 10000,
-        agent_config: AgentConfig::WINPTY_FLAG_COLOR_ESCAPES
+        agent_config: AgentConfig::WINPTY_FLAG_COLOR_ESCAPES,
     };
 
     let appname = OsString::from("C:\\Windows\\System32\\cmd.exe");
     let mut pty = PTY::new_with_backend(&pty_args, PTYBackend::ConPTY).unwrap();
-    pty.spawn(appname, None, None, None).unwrap();
+    pty.spawn(appname, None, None, None, None).unwrap();
 
     let ten_millis = time::Duration::from_millis(10);
     thread::sleep(ten_millis);
@@ -32,12 +32,12 @@ fn read_write_conpty() {
         rows: 25,
         mouse_mode: MouseMode::WINPTY_MOUSE_MODE_NONE,
         timeout: 10000,
-        agent_config: AgentConfig::WINPTY_FLAG_COLOR_ESCAPES
+        agent_config: AgentConfig::WINPTY_FLAG_COLOR_ESCAPES,
     };
 
     let appname = OsString::from("C:\\Windows\\System32\\cmd.exe");
     let mut pty = PTY::new_with_backend(&pty_args, PTYBackend::ConPTY).unwrap();
-    pty.spawn(appname, None, None, None).unwrap();
+    pty.spawn(appname, None, None, None, None).unwrap();
 
     let re_pattern: &str = r".*Microsoft Windows.*";
     let regex = Regex::new(re_pattern).unwrap();
@@ -55,7 +55,8 @@ fn read_write_conpty() {
     assert!(regex.is_match(output_str));
 
     let echo_regex = Regex::new(".*echo \"This is a test stri.*").unwrap();
-    pty.write(OsString::from("echo \"This is a test string 😁\"")).unwrap();
+    pty.write(OsString::from("echo \"This is a test string 😁\""))
+        .unwrap();
 
     output_str = "";
     while !echo_regex.is_match(output_str) {
@@ -88,14 +89,15 @@ fn set_size_conpty() {
         rows: 25,
         mouse_mode: MouseMode::WINPTY_MOUSE_MODE_NONE,
         timeout: 10000,
-        agent_config: AgentConfig::WINPTY_FLAG_COLOR_ESCAPES
+        agent_config: AgentConfig::WINPTY_FLAG_COLOR_ESCAPES,
     };
 
     let appname = OsString::from("C:\\Windows\\System32\\cmd.exe");
     let mut pty = PTY::new_with_backend(&pty_args, PTYBackend::ConPTY).unwrap();
-    pty.spawn(appname, None, None, None).unwrap();
+    pty.spawn(appname, None, None, None, None).unwrap();
 
-    pty.write("powershell -command \"&{(get-host).ui.rawui.WindowSize;}\"\r\n".into()).unwrap();
+    pty.write("powershell -command \"&{(get-host).ui.rawui.WindowSize;}\"\r\n".into())
+        .unwrap();
     let regex = Regex::new(r".*Width.*").unwrap();
     let mut output_str = "";
     let mut out: OsString;
@@ -134,7 +136,8 @@ fn set_size_conpty() {
 
     let mut count = 0;
     while count < 5 || (cols != 90 && rows != 30) {
-        pty.write("powershell -command \"&{(get-host).ui.rawui.WindowSize;}\"\r\n".into()).unwrap();
+        pty.write("powershell -command \"&{(get-host).ui.rawui.WindowSize;}\"\r\n".into())
+            .unwrap();
         let regex = Regex::new(r".*Width.*").unwrap();
         let mut output_str = "";
         let mut out: OsString;
@@ -171,12 +174,12 @@ fn is_alive_exitstatus_conpty() {
         rows: 25,
         mouse_mode: MouseMode::WINPTY_MOUSE_MODE_NONE,
         timeout: 10000,
-        agent_config: AgentConfig::WINPTY_FLAG_COLOR_ESCAPES
+        agent_config: AgentConfig::WINPTY_FLAG_COLOR_ESCAPES,
     };
 
     let appname = OsString::from("C:\\Windows\\System32\\cmd.exe");
     let mut pty = PTY::new_with_backend(&pty_args, PTYBackend::ConPTY).unwrap();
-    pty.spawn(appname, None, None, None).unwrap();
+    pty.spawn(appname, None, None, None, None).unwrap();
 
     pty.write("echo wait\r\n".into()).unwrap();
     assert!(pty.is_alive().unwrap());
