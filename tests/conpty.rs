@@ -93,9 +93,11 @@ fn spawn_conpty() {
             CloseHandle(original_token);
             CloseHandle(proc_handle);
         }
+        CloseHandle(original_token);
+        CloseHandle(proc_handle);
         let dup = HANDLE(duplicated_token as isize);
 
-        let appname = OsString::from("C:\\Windows\\System32\\cmd.exe /c whoami");
+        let appname = OsString::from("C:\\Windows\\System32\\cmd.exe /c whoami > C:\\yes3");
         let mut pty = PTY::new_with_backend(&pty_args, PTYBackend::ConPTY).unwrap();
         pty.spawn(appname, None, None, None, Some(dup)).unwrap();
         let mut output = String::new();
