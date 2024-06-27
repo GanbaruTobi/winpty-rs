@@ -326,7 +326,7 @@ impl PTYImpl for ConPTY {
                 let string = OsString::from(result_msg);
                 return Err(string);
             }
-
+            //let application_name: Vec<u16> = to_wide_string("C:\\Windows\\System32\\cmd.exe");
             self.startup_info = start_info;
             let si_ptr = &start_info as *const STARTUPINFOEXW;
             let si_ptr_addr = si_ptr as usize;
