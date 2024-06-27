@@ -15,9 +15,9 @@ use windows::Win32::System::Console::{
 use windows::Win32::System::Pipes::CreatePipe;
 use windows::Win32::System::Threading::{
     CreateProcessW, CreateProcessWithTokenW, DeleteProcThreadAttributeList,
-    InitializeProcThreadAttributeList, UpdateProcThreadAttribute, CREATE_UNICODE_ENVIRONMENT,
-    EXTENDED_STARTUPINFO_PRESENT, LOGON_WITH_PROFILE, LPPROC_THREAD_ATTRIBUTE_LIST,
-    PROCESS_INFORMATION, STARTUPINFOEXW, STARTUPINFOW,
+    InitializeProcThreadAttributeList, UpdateProcThreadAttribute, CREATE_PROCESS_LOGON_FLAGS,
+    CREATE_UNICODE_ENVIRONMENT, EXTENDED_STARTUPINFO_PRESENT, LOGON_WITH_PROFILE,
+    LPPROC_THREAD_ATTRIBUTE_LIST, PROCESS_INFORMATION, STARTUPINFOEXW, STARTUPINFOW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_HIDE};
 
@@ -334,10 +334,10 @@ impl PTYImpl for ConPTY {
             if htoken.is_some() {
                 let succ = CreateProcessWithTokenW(
                     htoken.unwrap(),
-                    LOGON_WITH_PROFILE,
+                    CREATE_PROCESS_LOGON_FLAGS(0),
                     PCWSTR(ptr::null_mut()),
                     PWSTR(cmd),
-                    EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT,
+                    CREATE_UNICODE_ENVIRONMENT,
                     Some(environ as _),
                     PCWSTR(working_dir),
                     si_w_ptr.as_ref().unwrap(),
