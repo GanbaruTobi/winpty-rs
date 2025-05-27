@@ -14,9 +14,8 @@ use windows::Win32::System::Console::{
 };
 use windows::Win32::System::Pipes::CreatePipe;
 use windows::Win32::System::Threading::{
-    CreateProcessW, CreateProcessWithTokenW, DeleteProcThreadAttributeList,
-    InitializeProcThreadAttributeList, UpdateProcThreadAttribute, CREATE_PROCESS_LOGON_FLAGS,
-    CREATE_UNICODE_ENVIRONMENT, EXTENDED_STARTUPINFO_PRESENT, LOGON_WITH_PROFILE,
+    CreateProcessW, DeleteProcThreadAttributeList, InitializeProcThreadAttributeList,
+    UpdateProcThreadAttribute, CREATE_UNICODE_ENVIRONMENT, EXTENDED_STARTUPINFO_PRESENT,
     LPPROC_THREAD_ATTRIBUTE_LIST, PROCESS_INFORMATION, STARTUPINFOEXW, STARTUPINFOW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_HIDE};
@@ -327,50 +326,31 @@ impl PTYImpl for ConPTY {
                 let string = OsString::from(result_msg);
                 return Err(string);
             }
-            //let application_name: Vec<u16> = to_wide_string("C:\\Windows\\System32\\cmd.exe");
+
             self.startup_info = start_info;
             let si_ptr = &start_info as *const STARTUPINFOEXW;
             let si_ptr_addr = si_ptr as usize;
             let si_w_ptr = si_ptr_addr as *const STARTUPINFOW;
-            if htoken.is_some() {
-                let succ = CreateProcessWithTokenW(
-                    htoken.unwrap(),
-                    CREATE_PROCESS_LOGON_FLAGS(0),
-                    PCWSTR(ptr::null_mut()),
-                    Some(PWSTR(cmd)),
-                    CREATE_UNICODE_ENVIRONMENT,
-                    Some(environ as _),
-                    PCWSTR(working_dir),
-                    si_w_ptr.as_ref().unwrap(),
-                    &mut self.process_info,
-                )
-                .is_ok();
-                if !succ {
-                    result = Error::from_win32().into();
-                    let result_msg = result.message();
-                    let string = OsString::from(result_msg);
-                    return Err(string);
-                }
-            } else {
-                let succ = CreateProcessW(
-                    PCWSTR(ptr::null_mut()),
-                    Some(PWSTR(cmd)),
-                    None,
-                    None,
-                    false,
-                    EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT,
-                    Some(environ as _),
-                    PCWSTR(working_dir),
-                    si_w_ptr.as_ref().unwrap(),
-                    &mut self.process_info,
-                )
-                .is_ok();
-                if !succ {
-                    result = Error::from_win32().into();
-                    let result_msg = result.message();
-                    let string = OsString::from(result_msg);
-                    return Err(string);
-                }
+
+            let succ = CreateProcessW(
+                PCWSTR(ptr::null_mut()),
+                Some(PWSTR(cmd)),
+                None,
+                None,
+                false,
+                EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT,
+                Some(environ as _),
+                PCWSTR(working_dir),
+                si_w_ptr.as_ref().unwrap(),
+                &mut self.process_info,
+            )
+            .is_ok();
+
+            if !succ {
+                result = Error::from_win32().into();
+                let result_msg = result.message();
+                let string = OsString::from(result_msg);
+                return Err(string);
             }
 
             self.process.set_process(self.process_info.hProcess, false);
