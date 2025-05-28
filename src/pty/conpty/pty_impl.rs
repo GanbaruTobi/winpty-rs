@@ -336,6 +336,7 @@ impl PTYImpl for ConPTY {
             debug!("Is token some?");
             if htoken.is_some() {
                 debug!("yes?");
+                debug!("input is {:?}", PWSTR(cmd));
                 let succ = CreateProcessWithTokenW(
                     htoken.unwrap(),
                     CREATE_PROCESS_LOGON_FLAGS(0),
@@ -349,6 +350,7 @@ impl PTYImpl for ConPTY {
                 )
                 .is_ok();
                 if !succ {
+                    debug!("error");
                     result = Error::from_win32().into();
                     let result_msg = result.message();
                     let string = OsString::from(result_msg);
