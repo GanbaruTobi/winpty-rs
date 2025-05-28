@@ -261,7 +261,7 @@ impl PTYImpl for ConPTY {
             working_dir = cwd_buf.as_ptr();
         }
 
-        if let Some(cmdline_opt) = cmdline {
+        if let Some(cmdline_opt) = &cmdline {
             cmd_buf = cmdline_opt.encode_wide().collect();
             cmdline_oss_buf.push(0x0020);
             cmdline_oss_buf.extend(cmd_buf);
@@ -336,7 +336,7 @@ impl PTYImpl for ConPTY {
             debug!("Is token some?");
             if htoken.is_some() {
                 debug!("yes?");
-                debug!("input is {:?}", Some(PWSTR(cmd)));
+                debug!("input is {:?}", &cmdline);
                 let succ = CreateProcessWithTokenW(
                     htoken.unwrap(),
                     CREATE_PROCESS_LOGON_FLAGS(0),
