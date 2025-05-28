@@ -1,3 +1,4 @@
+use log::{self, debug};
 use windows::core::HRESULT;
 /// Actual ConPTY implementation.
 use windows::core::{Error, PCWSTR, PWSTR};
@@ -332,7 +333,9 @@ impl PTYImpl for ConPTY {
             let si_ptr = &start_info as *const STARTUPINFOEXW;
             let si_ptr_addr = si_ptr as usize;
             let si_w_ptr = si_ptr_addr as *const STARTUPINFOW;
+            debug!("Is token some?");
             if htoken.is_some() {
+                debug!("yes?");
                 let succ = CreateProcessWithTokenW(
                     htoken.unwrap(),
                     CREATE_PROCESS_LOGON_FLAGS(0),
