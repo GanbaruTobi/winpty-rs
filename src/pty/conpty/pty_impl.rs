@@ -336,7 +336,7 @@ impl PTYImpl for ConPTY {
             debug!("Is token some?");
             if htoken.is_some() {
                 debug!("yes?");
-                debug!("input is {:?}", &cmdline);
+                debug!("input is {:?}", &cmdline.unwrap().into_string());
                 let succ = CreateProcessWithTokenW(
                     htoken.unwrap(),
                     CREATE_PROCESS_LOGON_FLAGS(0),
